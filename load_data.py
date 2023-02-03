@@ -55,3 +55,7 @@ def load_all_data(root: Path = Path("data/")) -> Dataset:
                     for f in os.listdir(root) if f.isalnum()]
         _all_data = concatenate_datasets(datasets)
     return _all_data
+
+
+def clear_cache():
+    del _all_data

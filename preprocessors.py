@@ -1,3 +1,6 @@
+"""
+A uniform abstract interface for image preprocessors.
+"""
 from abc import ABC, abstractmethod
 from typing import List
 from typing import Optional

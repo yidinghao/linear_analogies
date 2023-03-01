@@ -1,3 +1,6 @@
+"""
+A uniform abstract interface for torchvision and Hugging Face models.
+"""
 from typing import Optional
 
 import torch

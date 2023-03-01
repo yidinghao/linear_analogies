@@ -1,34 +1,27 @@
 import pickle
-from typing import Any, Dict
 
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-from transformers import ViTModel, ViTFeatureExtractor
 
 from load_data import load_all_data
+from models import ViTModel, AlexNetModel
+from preprocessors import Preprocessor, ViTPreprocessor, AlexNetPreprocessor
 
 
-def transform(batch: Dict[str, Any], tokenizer: ViTFeatureExtractor):
-    inputs = tokenizer(batch["image"], return_tensors="pt")
-    inputs["shape"] = batch["shape"]
-    inputs["texture"] = batch["texture"]
-    return inputs
-
-
-def get_vectors(model: nn.Module, tokenizer: ViTFeatureExtractor,
+def get_vectors(model: nn.Module, preprocessor: Preprocessor,
                 batch_size: int = 5, output_filename: str = "vectors.p",
                 use_cuda: bool = True):
     """
     Extract representations
 
     :param model:
-    :param tokenizer:
+    :param preprocessor:
     :param batch_size:
     :param use_cuda:
     :return:
     """
-    data = load_all_data().with_transform(lambda b: transform(b, tokenizer))
+    data = load_all_data(preprocessor=preprocessor)
     if use_cuda:
         model.cuda()
     model.eval()
@@ -48,9 +41,7 @@ def get_vectors(model: nn.Module, tokenizer: ViTFeatureExtractor,
             else:
                 input_ = batch["pixel_values"]
 
-            vecs = model(input_).pooler_output
-            del input_
-            vecs = vecs.cpu()
+            vecs = model(input_).cpu()
             all_vectors.append(vecs)
 
     # Output to file
@@ -60,8 +51,13 @@ def get_vectors(model: nn.Module, tokenizer: ViTFeatureExtractor,
                      "textures": all_textures}, o)
 
 
+use_vit = True
+
 if __name__ == "__main__":
-    vit = ViTModel.from_pretrained("google/vit-base-patch16-224")
-    feature_extractor = ViTFeatureExtractor.from_pretrained(
-        "google/vit-base-patch16-224")
-    get_vectors(vit, feature_extractor)
+    if use_vit:
+        get_vectors(ViTModel("google/vit-base-patch16-224"),
+                    ViTPreprocessor("google/vit-base-patch16-224"))
+    else:
+        #  model = AlexNetModel("AlexNet_Weights.IMAGENET1K_V1")
+        get_vectors(AlexNetModel("AlexNet_Weights.DEFAULT"),
+                    AlexNetPreprocessor())

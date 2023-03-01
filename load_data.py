@@ -1,8 +1,11 @@
 import csv
 import os
 from pathlib import Path
+from typing import Optional
 
 from datasets import Dataset, load_dataset, concatenate_datasets
+
+from preprocessors import Preprocessor
 
 _all_data = None
 
@@ -42,11 +45,13 @@ def _load_folder(folder: str, root: Path = Path("data/")) -> Dataset:
     return load_dataset("imagefolder", data_dir=folder)["train"]
 
 
-def load_all_data(root: Path = Path("data/")) -> Dataset:
+def load_all_data(root: Path = Path("data/"),
+                  preprocessor: Optional[Preprocessor] = None) -> Dataset:
     """
     Loads all images from the Gheiros dataset.
 
     :param root: The root directory of the Gheiros dataset
+    :param preprocessor:
     :return: The loaded data
     """
     global _all_data
@@ -54,6 +59,12 @@ def load_all_data(root: Path = Path("data/")) -> Dataset:
         datasets = [_load_folder(f, root=root)
                     for f in os.listdir(root) if f.isalnum()]
         _all_data = concatenate_datasets(datasets)
+
+    if preprocessor is not None:
+        _all_data = _all_data.with_transform(
+            lambda b: {"pixel_values": preprocessor(b["image"]),
+                       "shape": b["shape"], "texture": b["texture"]})
+
     return _all_data
 
 

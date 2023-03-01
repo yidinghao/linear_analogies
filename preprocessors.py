@@ -8,6 +8,9 @@ from PIL import Image
 from torchvision import transforms
 from transformers import ViTImageProcessor
 
+__all__ = ["Preprocessor", "BaselinePreprocessor", "AlexNetPreprocessor",
+           "ResNetPreprocessor", "ViTPreprocessor"]
+
 
 class Preprocessor(ABC):
     """

@@ -5,6 +5,8 @@ import torch.nn as nn
 import torchvision.models as torchvision_models
 from transformers import ViTModel as HuggingFaceViTModel
 
+__all__ = ["BaselineModel", "AlexNetModel", "ResNetModel", "ViTModel"]
+
 
 class BaselineModel(nn.Module):
     """

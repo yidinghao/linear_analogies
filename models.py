@@ -6,7 +6,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torchvision.models as torchvision_models
-from transformers import ViTModel as HuggingFaceViTModel
+from transformers import ViTModel as HuggingFaceViTModel, ViTConfig
 
 __all__ = ["BaselineModel", "AlexNetModel", "ResNetModel", "ViTModel"]
 
@@ -62,12 +62,13 @@ class ViTModel(nn.Module):
     A wrapper around Hugging Face's Vision Transformer.
     """
 
-    def __init__(self, model_name: Optional[str] = None):
+    def __init__(self, model_name, pretrained: bool = True):
         super(ViTModel, self).__init__()
-        if model_name is None:
-            self.vit = HuggingFaceViTModel()
-        else:
+        if pretrained:
             self.vit = HuggingFaceViTModel.from_pretrained(model_name)
+        else:
+            config = ViTConfig.from_pretrained(model_name)
+            self.vit = HuggingFaceViTModel(config)
 
     def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.vit(pixel_values=pixel_values).pooler_output

@@ -6,7 +6,8 @@ from collections import namedtuple
 from pathlib import Path
 from typing import Optional, Tuple
 
-from PIL import Image, ImageDraw
+import numpy as np
+from PIL import Image, ImageDraw, ImageChops
 
 """ Color and Shape Definitions """
 
@@ -82,19 +83,21 @@ def _draw_shape(drawer: ImageDraw, shape: Shape):
                                3, rotation=shape.rotation, fill=shape.color)
 
 
-def draw_shape(shape: Shape, texture_name: Optional[str] = None) -> Image:
+def draw_shape(shape: Shape, texture_name: Optional[str] = None,
+               bg_color: Tuple[int, ...] = colors["gray"]) -> Image:
     """
-    Draws a colored shape with a gray background and an optional
+    Draws a colored shape with a solid background and an optional
     texture.
 
     :param shape: The shape to be drawn
     :param texture_name: An optional texture to apply to the shape
+    :param bg_color: The background color
     :return: The image with the shape in it
     """
     global colors
 
     # Draw the basic shape
-    shape_image = Image.new("RGB", (224, 224), colors["gray"])
+    shape_image = Image.new("RGB", (224, 224), bg_color)
     _draw_shape(ImageDraw.Draw(shape_image), shape)
 
     if texture_name is None:
@@ -107,3 +110,36 @@ def draw_shape(shape: Shape, texture_name: Optional[str] = None) -> Image:
 
     return Image.composite(shape_image, get_texture(texture_name),
                            mask).convert("RGB")
+
+
+# pixels: Overlap in pixels
+# percentage: Overlap in percentage of combined area
+# percentage1: Overlap in percentage of img1's area
+# percentage2: Overlap in percentage of img2's area
+Overlap = namedtuple("Overlap", "pixels percentage percentage1 percentage2")
+
+
+def _get_area(img: Image) -> int:
+    return np.asarray(img, dtype="int8").sum()
+
+
+def calculate_overlap(s1: Shape, s2: Shape) -> Overlap:
+    """
+    Calculates how much overlap there is between two shapes.
+
+    :param s1: A shape
+    :param s2: Another shape image
+    :return: The amount of overlap between s1 and s2
+    """
+    img1 = draw_shape(s1._replace(color=(255, 255, 255)),
+                      bg_color=(0, 0, 0)).convert("1")
+    img2 = draw_shape(s2._replace(color=(255, 255, 255)),
+                      bg_color=(0, 0, 0)).convert("1")
+
+    area1 = _get_area(img1)
+    area2 = _get_area(img2)
+    intersection = _get_area(ImageChops.logical_and(img1, img2))
+    union = _get_area(ImageChops.logical_or(img1, img2))
+
+    return Overlap(intersection, intersection / union, intersection / area1,
+                   intersection / area2)

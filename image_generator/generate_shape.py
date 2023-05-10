@@ -1,20 +1,25 @@
 """
 Code for generating pictures of shapes on a gray background.
 """
+import random
+from collections import namedtuple
 from pathlib import Path
 from typing import Optional, Tuple
 
 from PIL import Image, ImageDraw
 
-""" Color Definitions """
+""" Color and Shape Definitions """
 
 colors = {"red": (225, 0, 0),
           "green": (0, 225, 0),
           "blue": (0, 0, 225),
           "gray": (128, 128, 128)}
 
-""" Code for Loading Textures """
+shapes = ["circle", "square", "triangle"]
 
+""" Texture Definitions """
+
+texture_names = ["blotchy", "knitted", "lacelike", "marbled", "porous"]
 textures_dir = Path("data/textures/")
 textures = {}
 
@@ -36,52 +41,66 @@ def get_texture(texture_name: str) -> Image:
 
 """ Code for Drawing Shapes """
 
-
-def _draw_shape(drawer: ImageDraw, shape: str, color: Tuple[int, ...],
-                center_x: int, center_y: int, radius: int, rotation: int,
-                texture_name: Optional[str] = None):
-    """ Helper function for drawing a shape """
-    if shape == "circle":
-        drawer.ellipse((center_x - radius, center_y - radius, center_x +
-                        radius, center_y + radius), fill=color)
-    elif shape == "square":
-        drawer.regular_polygon((center_x, center_y, radius), 4,
-                               rotation=rotation, fill=color)
-    elif shape == "triangle":
-        drawer.regular_polygon((center_x, center_y, radius), 3,
-                               rotation=rotation, fill=color)
+Shape = namedtuple("Shape", "shape color center_x center_y radius rotation")
 
 
-def draw_shape(shape: str, color: Tuple[int, ...], center_x: int,
-               center_y: int, radius: int, rotation: int,
-               texture_name: Optional[str] = None) -> Image:
+def generate_shape(shape_name: str, color: Tuple[int, ...]) -> Shape:
+    """
+    Generates a shape with a given color and optional texture.
+
+    :param shape_name: One of the options in the shapes list
+    :param color: An RGB or RGBA tuple
+    :return: A randomly generated shape
+    """
+    global colors
+    if isinstance(color, str):
+        color = colors[color]
+
+    x = random.randint(20, 205)
+    y = random.randint(20, 205)
+    max_radius = min(x, y, 225 - x, 225 - y)
+    radius = random.randint(20, max_radius)
+    rotation = random.randint(0, 359)
+
+    return Shape(shape_name, color, x, y, radius, rotation)
+
+
+def _draw_shape(drawer: ImageDraw, shape: Shape):
+    if shape.shape == "circle":
+        drawer.ellipse((shape.center_x - shape.radius,
+                        shape.center_y - shape.radius,
+                        shape.center_x + shape.radius,
+                        shape.center_y + shape.radius), fill=shape.color)
+    elif shape.shape == "square":
+        drawer.regular_polygon((shape.center_x, shape.center_y, shape.radius),
+                               4, rotation=shape.rotation, fill=shape.color)
+    elif shape.shape == "triangle":
+        drawer.regular_polygon((shape.center_x, shape.center_y, shape.radius),
+                               3, rotation=shape.rotation, fill=shape.color)
+
+
+def draw_shape(shape: Shape, texture_name: Optional[str] = None) -> Image:
     """
     Draws a colored shape with a gray background and an optional
     texture.
 
-    :param shape:
-    :param color:
-    :param center_x:
-    :param center_y:
-    :param radius:
-    :param rotation:
-    :param texture_name:
-    :return:
+    :param shape: The shape to be drawn
+    :param texture_name: An optional texture to apply to the shape
+    :return: The image with the shape in it
     """
     global colors
 
     # Draw the basic shape
     shape_image = Image.new("RGB", (224, 224), colors["gray"])
-    _draw_shape(ImageDraw.Draw(shape_image), shape, color, center_x, center_y,
-                radius, rotation)
+    _draw_shape(ImageDraw.Draw(shape_image), shape)
 
     if texture_name is None:
         return shape_image
 
     # Draw texture
     mask = Image.new("RGBA", (224, 224), (0, 0, 0))
-    _draw_shape(ImageDraw.Draw(mask), shape, (256, 256, 256, 50), center_x,
-                center_y, radius, rotation)
+    _draw_shape(ImageDraw.Draw(mask),
+                shape._replace(color=(256, 256, 256, 50)))
 
     return Image.composite(shape_image, get_texture(texture_name),
                            mask).convert("RGB")

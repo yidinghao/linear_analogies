@@ -47,6 +47,9 @@ Shape = namedtuple("Shape", "shape color center_x center_y radius rotation")
 def generate_shape(shape_name: str, color: Tuple[int, ...]) -> Shape:
     """
     Generates a shape with a given color and optional texture.
+    Number of unique blue circles: 1,089,836
+    Number of unique blue squares/triangles: 392,340,960
+    Total number of unique shapes: 2,357,315,268
 
     :param shape_name: One of the options in the shapes list
     :param color: An RGB or RGBA tuple

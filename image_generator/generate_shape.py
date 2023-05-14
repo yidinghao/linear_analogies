@@ -1,35 +1,43 @@
 """
 Code for generating pictures of shapes on a gray background.
 """
+import math
 import random
 from collections import namedtuple
 from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageChops
+from PIL import Image, ImageDraw, ImageChops, ImageOps, ImageStat, ImageEnhance
 
 """ Color and Shape Definitions """
 
 colors = {"red": (225, 0, 0),
           "green": (0, 225, 0),
           "blue": (0, 0, 225),
-          "gray": (128, 128, 128)}
+          "cyan": (0, 225, 225),
+          "magenta": (225, 0, 225),
+          "yellow": (225, 225, 0),
+          "gray": (128, 128, 128),
+          "black": (0, 0, 0),
+          "white": (225, 225, 225)}
 
 shapes = ["circle", "square", "triangle"]
 
 """ Texture Definitions """
 
 texture_names = ["blotchy", "knitted", "lacelike", "marbled", "porous"]
-textures_dir = Path("data/textures/")
+textures_dir = Path("textures")
 textures = {}
 
 
-def _load_texture(texture_name: str) -> Image:
+def _load_texture(texture_name: str, brightness: float = 512 / 3 - 1) -> Image:
     """ Loads textures from files """
     global textures_dir
-    texture_image = Image.open(textures_dir / "{}.jpeg".format(texture_name))
-    return texture_image.resize((224, 224)).convert("L").convert("RGBA")
+    texture_img = Image.open(textures_dir / "{}.jpeg".format(texture_name))
+    texture_img = ImageOps.grayscale(texture_img.resize((224, 224)))
+    factor = brightness / ImageStat.Stat(texture_img).mean[0]
+    return ImageEnhance.Brightness(texture_img).enhance(factor).convert("RGB")
 
 
 def get_texture(texture_name: str) -> Image:
@@ -41,7 +49,7 @@ def get_texture(texture_name: str) -> Image:
 
 
 """ Code for Drawing Shapes """
-
+1
 Shape = namedtuple("Shape", "shape color center_x center_y radius rotation")
 
 
@@ -104,9 +112,9 @@ def draw_shape(shape: Shape, texture_name: Optional[str] = None,
         return shape_image
 
     # Draw texture
-    mask = Image.new("RGBA", (224, 224), (0, 0, 0))
+    mask = Image.new("RGBA", (224, 224), (0, 0, 0, 255))
     _draw_shape(ImageDraw.Draw(mask),
-                shape._replace(color=(256, 256, 256, 50)))
+                shape._replace(color=(225, 225, 225, 86)))
 
     return Image.composite(shape_image, get_texture(texture_name),
                            mask).convert("RGB")
@@ -131,6 +139,12 @@ def calculate_overlap(s1: Shape, s2: Shape) -> Overlap:
     :param s2: Another shape image
     :return: The amount of overlap between s1 and s2
     """
+    # First check for zero overlap
+    d = math.dist((s1.center_x, s1.center_y), (s2.center_x, s2.center_y))
+    if d > s1.radius + s2.radius + .01:
+        return Overlap(0, 0., 0., 0.)
+
+    # Now draw the two pictures and calculate the overlap
     img1 = draw_shape(s1._replace(color=(255, 255, 255)),
                       bg_color=(0, 0, 0)).convert("1")
     img2 = draw_shape(s2._replace(color=(255, 255, 255)),
@@ -143,3 +157,9 @@ def calculate_overlap(s1: Shape, s2: Shape) -> Overlap:
 
     return Overlap(intersection, intersection / union, intersection / area1,
                    intersection / area2)
+
+
+if __name__ == "__main__":
+    shape = Shape("circle", colors["green"], 112, 112, 50, 0)
+    for t in texture_names:
+        draw_shape(shape, texture_name=t).show()

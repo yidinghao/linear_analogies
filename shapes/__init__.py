@@ -1,1 +1,1 @@
-from generate_shape import Shape
+from draw import Shape

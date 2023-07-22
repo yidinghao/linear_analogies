@@ -1,1 +1,1 @@
-from draw import Shape
+from shapes.shape import Shape

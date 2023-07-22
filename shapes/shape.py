@@ -19,10 +19,10 @@ class Textures:
     """
 
     _brightness = 512 / 3 - 1
-    textures_dir = Path("shapes/textures")
 
     def __init__(self, *texture_names: str):
         self._textures = {tn: None for tn in texture_names}
+        self.textures_dir = Path("shapes/textures")
 
     def __contains__(self, item: str):
         return item in self._textures
@@ -128,7 +128,7 @@ class Shape(NamedTuple):
         if color is None:
             color = cls._generate_color()
         elif isinstance(color, str):
-            color = colors[color]
+            color = cls.colors[color]
 
         if center_x is None:
             center_x = cls._generate_x()

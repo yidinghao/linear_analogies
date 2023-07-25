@@ -100,9 +100,9 @@ class Shape(NamedTuple):
 
     shapes = ("circle", "square", "triangle")
     colors = (Color("red"), Color("green"), Color("blue"))
-    max_x = canvas_size[0] - 1
-    max_y = canvas_size[1] - 1
+    max_x, max_y = canvas_size
     min_radius = 20
+    max_rotation = {"circle": 1, "square": 90, "triangle": 120}
     textures = (Texture("blotchy"), Texture("knitted"), Texture("lacelike"),
                 Texture("marbled"), Texture("porous"))
 
@@ -130,9 +130,9 @@ class Shape(NamedTuple):
             max_radius = int(min(cls.max_x, cls.max_y) / 2)
         return random.randint(cls.min_radius, max_radius)
 
-    @staticmethod
-    def _generate_rotation():
-        return random.randint(0, 359)
+    @classmethod
+    def _generate_rotation(cls, shape: str):
+        return random.randint(0, cls.max_rotation[shape])
 
     @classmethod
     def generate(cls, shape: Optional[str] = None,
@@ -150,7 +150,8 @@ class Shape(NamedTuple):
         color = cls._sample(cls.colors) if color is None else color
         x = cls._generate_xy(cls.max_x) if x is None else x
         y = cls._generate_xy(cls.max_y) if y is None else y
-        rotation = cls._generate_rotation() if rotation is None else rotation
+        rotation = cls._generate_rotation("shape") if rotation is None else \
+            rotation
         if radius is None:
             radius = cls._generate_radius(max_radius=cls.max_radius(x, y))
         if not no_texture and texture is None:
@@ -173,7 +174,8 @@ class Shape(NamedTuple):
             y = self.y if "y" not in kwargs else kwargs["y"]
             kwargs["radius"] = self._generate_radius(self.max_radius(x, y))
         if "rotation" in features:
-            kwargs["rotation"] = self._generate_rotation()
+            shape = self.shape if "shape" not in kwargs else kwargs["shape"]
+            kwargs["rotation"] = self._generate_rotation(shape)
         if "texture" in features:
             kwargs["texture"] = self._sample(self.textures,
                                              exclude=self.texture)

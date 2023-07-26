@@ -3,7 +3,7 @@ Code for generating pictures of shapes on a gray background.
 """
 import random
 from pathlib import Path
-from typing import List, NamedTuple, Optional, Tuple
+from typing import List, NamedTuple, Optional, Tuple, Union
 
 from PIL import Image, ImageDraw, ImageOps, ImageStat, ImageEnhance
 
@@ -32,24 +32,42 @@ class Color:
         :param alpha: The color's alpha value
         """
         self.alpha = alpha
+        self.name = None
+
+        # If the user entered the color name...
         if len(args) == 1 and args[0] in self.names:
             self.rgb = self.names[args[0]]
+            self.name = args[0]
+        # If the user entered the RGB...
         elif all(isinstance(a, int) for a in args) and len(args) == 3:
-            self.rgb = args
+            self.rgb = tuple(args)
+        # If the user entered an RGBA...
         elif all(isinstance(a, int) for a in args) and len(args) == 4:
-            self.rgb = args[:3]
+            self.rgb = tuple(args[:3])
             if alpha is None:
                 self.alpha = args[3]
         else:
             raise ValueError("{} is not a valid color".format(",".join(args)))
+
+        # Figure out the name of the color
+        if self.name is None:
+            for k, v in self.names.items():
+                if v == self.rgb:
+                    self.name = k
+                    break
+        if self.name is None:
+            self.name = "%02x%02x%02x" % self.rgb
 
     def __call__(self) -> Tuple[int, ...]:
         return self.rgb if self.alpha is None else self.rgb + (self.alpha,)
 
     def __repr__(self):
         if self.alpha is None:
-            return "Color({}, {}, {})".format(*self.rgb, self.alpha)
-        return "Color({}, {}, {}, alpha={})".format(*self.rgb, self.alpha)
+            return "Color({})".format(self.name)
+        return "Color({}, alpha={})".format(*self.name, self.alpha)
+
+    def __str__(self):
+        return self.name
 
     def __hash__(self):
         return hash(self.rgb + (self.alpha,))
@@ -100,15 +118,17 @@ class Shape(NamedTuple):
 
     shapes = ("circle", "square", "triangle")
     colors = (Color("red"), Color("green"), Color("blue"))
-    max_x, max_y = canvas_size
     min_radius = 20
+    max_x = canvas_size[0] - min_radius - 1
+    max_y = canvas_size[1] - min_radius - 1
+
     max_rotation = {"circle": 1, "square": 90, "triangle": 120}
     textures = (Texture("blotchy"), Texture("knitted"), Texture("lacelike"),
                 Texture("marbled"), Texture("porous"))
 
     @classmethod
     def max_radius(cls, x: int, y: int) -> int:
-        return min(x, y, cls.max_x - x, cls.max_y - y)
+        return min(x, y, canvas_size[0] - x - 1, canvas_size[1] - y - 1)
 
     """ Generate a shape """
 
@@ -212,16 +232,27 @@ class Shape(NamedTuple):
         :return: The image with the shape in it
         """
         # Draw the basic shape
-        shape_image = Image.new("RGB", (self.max_x, self.max_y), bg_color())
+        shape_image = Image.new("RGB", canvas_size, bg_color())
         self._draw_shape(ImageDraw.Draw(shape_image))
 
         if self.texture is None:
             return shape_image
 
         # Draw texture
-        mask = Image.new("RGBA", (self.max_x, self.max_y), (0, 0, 0, 255))
+        mask = Image.new("RGBA", canvas_size, (0, 0, 0, 255))
         self._replace(color=Color(225, 225, 225, 86))._draw_shape(
             ImageDraw.Draw(mask))
 
         return Image.composite(shape_image, self.texture.image(), \
                                mask).convert("RGB")
+
+    """ Save the shape to a file """
+
+    def generate_filename(self) -> str:
+        return "{}_{}_{}_x{}_y{}_r{}_theta{}.png".format(
+            self.color.name, "" if self.texture is None else self.texture.name,
+            self.shape, self.x, self.y, self.radius, self.rotation)
+
+    def save(self, filename: Optional[Union[Path, str]] = None):
+        filename = self.generate_filename() if filename is None else filename
+        self.draw().save(filename)

@@ -170,7 +170,7 @@ class Shape(NamedTuple):
         color = cls._sample(cls.colors) if color is None else color
         x = cls._generate_xy(cls.max_x) if x is None else x
         y = cls._generate_xy(cls.max_y) if y is None else y
-        rotation = cls._generate_rotation("shape") if rotation is None else \
+        rotation = cls._generate_rotation(shape) if rotation is None else \
             rotation
         if radius is None:
             radius = cls._generate_radius(max_radius=cls.max_radius(x, y))

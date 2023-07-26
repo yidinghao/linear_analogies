@@ -40,7 +40,7 @@ class ResNetModel(nn.Module):
 
     def __init__(self, model_name: Optional[str] = "DEFAULT"):
         super(ResNetModel, self).__init__()
-        self.resnet = torchvision_models.resnet50(weights=model_name).features
+        self.resnet = torchvision_models.resnet50(weights=model_name)
 
     def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         pixel_values = self.resnet.conv1(pixel_values)
@@ -53,7 +53,7 @@ class ResNetModel(nn.Module):
         pixel_values = self.resnet.layer3(pixel_values)
         pixel_values = self.resnet.layer4(pixel_values)
 
-        pixel_values = self.resnet.avgpool(pixel_values)
+        # pixel_values = self.resnet.avgpool(pixel_values)
         return torch.flatten(pixel_values, 1)
 
 

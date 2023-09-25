@@ -1,6 +1,5 @@
 import csv
 import itertools
-import math
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -46,8 +45,7 @@ class GridSearch(ShapeGenerator):
 
     def __init__(self, num_x_steps: Optional[int] = 5,
                  num_y_steps: Optional[int] = 5,
-                 num_radius_steps: Optional[int] = 10,
-                 min_radius_stepsize: int = 5,
+                 radius_step: int = 5,
                  rotation_step: Optional[int] = 10,
                  no_texture: bool = True):
         """
@@ -55,9 +53,7 @@ class GridSearch(ShapeGenerator):
 
         :param num_x_steps: The number of x values to include
         :param num_y_steps: The number of y values to include
-        :param num_radius_steps: The number of radius values to include
-        :param min_radius_stepsize: The smallest possible interval
-            between two radius values
+        :param radius_step: The interval between two radius values
         :param rotation_step: The interval between different rotation
             values, measured in degrees
         :param no_texture: If True, then shapes will not have a texture,
@@ -65,28 +61,24 @@ class GridSearch(ShapeGenerator):
         """
         self.num_x_steps = num_x_steps
         self.num_y_steps = num_y_steps
-        self.num_radius_steps = num_radius_steps
-        self.min_radius_stepsize = min_radius_stepsize
+        self.radius_step = radius_step
         self.rotation_step = rotation_step
         self.no_texture = no_texture
 
     def generate(self) -> Iterator[Shape]:
-        """
-        Generates all possible images.
-        """
+        # Set up grid for features that do not depend on other features
         textures = [None] if self.no_texture else Shape.textures
         xs = np.linspace(Shape.min_radius, Shape.max_x, self.num_x_steps)
         ys = np.linspace(Shape.min_radius, Shape.max_y, self.num_y_steps)
         grid = itertools.product(Shape.shapes, Shape.colors, textures, xs, ys)
+
         for s, c, t, x, y in grid:
             x, y = round(x), round(y)
-            thetas = np.arange(0, Shape.max_rotation[s], self.rotation_step)
 
+            # Radius and rotation depend on shape and position
             max_r = Shape.max_radius(x, y)
-            max_r_steps = math.ceil(1 + (max_r - Shape.min_radius) /
-                                    self.min_radius_stepsize)
-            num_r_steps = min(max_r_steps, self.num_radius_steps)
-            radii = np.linspace(Shape.min_radius, max_r, num_r_steps)
+            radii = np.arange(Shape.min_radius, max_r, self.radius_step)
+            thetas = np.arange(0, Shape.max_rotation[s], self.rotation_step)
 
             for r, theta in itertools.product(radii, thetas):
                 r, theta = round(r), round(float(theta), 2)
@@ -105,5 +97,5 @@ class RandomShapes(ShapeGenerator):
 
 
 if __name__ == "__main__":
-    # GridSearch().create_dataset("../datasets/shapes/gridsearch_no_texture")
-    RandomShapes(1000).create_dataset("../datasets/shapes/random_no_texture")
+    GridSearch().create_dataset("../datasets/shapes/gridsearch_no_texture")
+    # RandomShapes(1000).create_dataset("../datasets/shapes/random_no_texture")
